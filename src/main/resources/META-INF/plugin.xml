@@ -1,0 +1,61 @@
+<idea-plugin url="https://github.com/luislh-dev/ZeitBuilder">
+    <id>com.zeitbuilder.ZeitBuilder</id>
+    <name>ZeitBuilder</name>
+    <vendor url="https://www.zeit.luislh.dev">Zeit</vendor>
+
+    <description><![CDATA[
+        <p><strong>ZeitBuilder</strong> - Automatic Builder pattern generator for Java classes.</p>
+
+        <h3>Key Features:</h3>
+        <ul>
+            <li><strong>Automatic generation:</strong> Creates an inner Builder class with fluent methods</li>
+            <li><strong>Two builder styles:</strong>
+                <ul>
+                    <li>Traditional builder (copies values at the end)</li>
+                    <li>Instance-based builder (directly modifies the object)</li>
+                </ul>
+            </li>
+            <li><strong>Field selection:</strong> Choose which fields to include in the builder</li>
+            <li><strong>Generated methods:</strong>
+                <ul>
+                    <li><code>builder()</code> - Static method to create the builder</li>
+                    <li><code>but()</code> - Method to create a modifiable copy</li>
+                    <li><code>build()</code> - Builds the final instance</li>
+                </ul>
+            </li>
+            <li><strong>IDE integration:</strong> Available in the Generate menu (Alt+Insert)</li>
+            <li><strong>Persistent configuration:</strong> Remembers your builder style preference</li>
+        </ul>
+
+        <h3>Usage:</h3>
+        <ol>
+            <li>Place the cursor inside a Java class</li>
+            <li>Press Alt+Insert or go to Code → Generate</li>
+            <li>Select "Builder"</li>
+            <li>Choose the fields and builder style</li>
+        </ol>
+
+        <p><em>Compatible with IntelliJ IDEA 2024.2+</em></p>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="com.zeitbuilder.zeitbuilder.storage.StorageSettings"/>
+
+        <applicationService serviceInterface="com.zeitbuilder.zeitbuilder.ui.choosers.MemberChooserProvider"
+                            serviceImplementation="com.zeitbuilder.zeitbuilder.ui.choosers.ClassMemberChooserUI"/>
+
+        <applicationService serviceImplementation="com.zeitbuilder.zeitbuilder.services.FieldSelectionService"/>
+    </extensions>
+
+    <actions>
+        <action id="BuilderGeneratorAction"
+                class="com.zeitbuilder.zeitbuilder.action.BuilderGeneratorAction"
+                text="Builder"
+                description="Genera el patrón Builder para la clase seleccionada">
+            <add-to-group group-id="GenerateGroup" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>
