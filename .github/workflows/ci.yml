@@ -16,6 +16,10 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+          cache: 'gradle'
+
+      - run: chmod +x gradlew
+
       - run: ./gradlew test
       - run: ./gradlew build
 
@@ -32,6 +36,10 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+          cache: 'gradle'
+
+      - run: chmod +x ./gradlew
+
       - run: ./gradlew test
         env:
           IDEA_VERSION: ${{ matrix.idea-version }}
