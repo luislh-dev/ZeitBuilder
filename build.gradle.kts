@@ -9,7 +9,7 @@ val assertjVersion = "3.24.2"
 val junitVersion = "4.13.2"
 
 group = "com.zeitbuilder"
-version = "1.0-SNAPSHOT"
+version = System.getenv("GITHUB_REF_NAME")?.removePrefix("v") ?: "1.0.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -56,6 +56,14 @@ tasks {
 
     test {
         useJUnit()
+    }
+
+    publishPlugin {
+        token.set(System.getenv("JETBRAINS_PUBLISH_TOKEN"))
+
+        val channel = System.getenv("CHANNEL") ?: "alpha"
+
+        channels.set(listOf(channel))
     }
 
 }

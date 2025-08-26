@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -43,3 +43,28 @@ jobs:
       - run: ./gradlew test
         env:
           IDEA_VERSION: ${{ matrix.idea-version }}
+
+  publish:
+    needs: [ build-test, compatibility-test ]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - run: chmod +x gradlew
+
+      - name: Publish Plugin
+        run: ./gradlew publishPlugin
+        env:
+          JETBRAINS_PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}
+          CHANNEL: ${{
+            contains(github.ref_name, 'alpha') && 'alpha' ||
+            (contains(github.ref_name, 'beta') && 'beta' || 'default')
+            }}
