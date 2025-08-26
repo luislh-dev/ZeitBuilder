@@ -69,7 +69,7 @@ public class ClassMemberChooserUI implements MemberChooserProvider {
 			false
 		);
 
-		JCheckBox useInstanceBasedCheckBox = new JCheckBox("Use instance-based builder");
+		JCheckBox useInstanceBasedCheckBox = new JCheckBox("Generate toBuilder() method");
 		useInstanceBasedCheckBox.setSelected(settings.isUseInstanceBased());
 		chooser.getContentPanel().add(useInstanceBasedCheckBox, BorderLayout.SOUTH);
 

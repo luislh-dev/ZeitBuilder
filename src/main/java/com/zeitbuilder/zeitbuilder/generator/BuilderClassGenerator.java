@@ -15,50 +15,25 @@ import java.util.List;
 public class BuilderClassGenerator {
 	private BuilderClassGenerator() {}
 
-	public static void generateBuilder(PsiClass psiClass, List<String> fieldNames, boolean useInstanceBased) {
+	public static void generateBuilder(PsiClass psiClass, List<String> fieldNames, boolean includeInBuilder) {
 		List<PsiField> selectedFields = mapNamesToFields(psiClass, fieldNames);
 
-		removeBuilderClasses(psiClass);
+		removeBuilderArtifacts(psiClass);
 
 		PsiElement endOfClass = psiClass.getLastChild();
 
-		PsiElement builderClass = useInstanceBased
-			? psiClass.addBefore(createInstanceBasedBuilderClass(psiClass, selectedFields), endOfClass)
-			: psiClass.addBefore(createBuilderClass(psiClass, selectedFields), endOfClass);
-		PsiElement butMethod = psiClass.addBefore(createButMethod(psiClass, selectedFields), builderClass);
-		psiClass.addBefore(createBuilderMethod(psiClass), butMethod);
+		psiClass.addBefore(createBuilderConstructor(psiClass, selectedFields), endOfClass);
 
-		formatClassCode(psiClass, builderClass);
-	}
+		PsiElement builderClass = psiClass.addBefore(createBuilderClass(psiClass, selectedFields), endOfClass);
 
-	@NotNull
-	public static PsiClass createInstanceBasedBuilderClass(PsiClass psiClass, List<PsiField> fields) {
-		PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
-
-		StringBuilder text = new StringBuilder("public static class Builder {");
-		text.append("private final ").append(psiClass.getName())
-			.append(" instance = new ").append(psiClass.getName()).append("();");
-
-		for (PsiField field : fields) {
-			String fieldType = field.getType().getCanonicalText();
-			String fieldName = field.getName();
-
-			text.append("public Builder ").append(fieldName).append("(")
-				.append(fieldType).append(" ").append(fieldName).append(") {")
-				.append("instance.set")
-				.append(Character.toUpperCase(fieldName.charAt(0)))
-				.append(fieldName.substring(1))
-				.append("(").append(fieldName).append(");")
-				.append("return this;")
-				.append("}");
+		PsiElement anchor = builderClass;
+		if (includeInBuilder) {
+			anchor = psiClass.addBefore(createToBuilderMethod(psiClass, selectedFields), builderClass);
 		}
 
-		text.append("public ").append(psiClass.getName()).append(" build() {")
-			.append("return instance;")
-			.append("}}");
+		psiClass.addBefore(createBuilderMethod(psiClass), anchor);
 
-		PsiClass dummyClass = elementFactory.createClassFromText(text.toString(), psiClass);
-		return dummyClass.getInnerClasses()[0];
+		formatClassCode(psiClass, builderClass);
 	}
 
 
@@ -68,85 +43,84 @@ public class BuilderClassGenerator {
 
 		StringBuilder text = new StringBuilder("public static class Builder {");
 
+		// campos en el builder
 		for (PsiField field : fields) {
 			String fieldType = field.getType().getCanonicalText();
 			String fieldName = field.getName();
 			text.append("private ").append(fieldType).append(" ").append(fieldName).append(";");
 		}
 
+		// métodos fluidos
 		for (PsiField field : fields) {
 			String fieldType = field.getType().getCanonicalText();
 			String fieldName = field.getName();
-
 			text.append("public Builder ").append(fieldName).append("(")
-					.append(fieldType).append(" ").append(fieldName).append(") {")
-					.append("this.").append(fieldName).append(" = ").append(fieldName).append(";")
-					.append("return this;")
-					.append("}");
+				.append(fieldType).append(" ").append(fieldName).append(") {")
+				.append("this.").append(fieldName).append(" = ").append(fieldName).append(";")
+				.append("return this;")
+				.append("}");
 		}
 
-		text.append("public ").append(psiClass.getName()).append(" build() {");
-		text.append(psiClass.getName()).append(" obj = new ").append(psiClass.getName()).append("();");
-		for (PsiField field : fields) {
-			String fieldName = field.getName();
-			text.append("obj.set")
-					.append(Character.toUpperCase(fieldName.charAt(0)))
-					.append(fieldName.substring(1))
-					.append("(this.").append(fieldName).append(");");
-		}
-		text.append("return obj;");
-		text.append("}}");
+		// build()
+		text.append("public ").append(psiClass.getName()).append(" build() {")
+			.append("return new ").append(psiClass.getName()).append("(this);")
+			.append("}}");
 
 		PsiClass dummyClass = elementFactory.createClassFromText(text.toString(), psiClass);
 		return dummyClass.getInnerClasses()[0];
 	}
 
-
-	public static PsiMethod createButMethod(PsiClass psiClass, List<PsiField> fields) {
+	public static PsiMethod createBuilderConstructor(PsiClass psiClass, List<PsiField> fields) {
 		PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
 
-		StringBuilder text = new StringBuilder("public Builder but() {");
+		StringBuilder text = new StringBuilder("private ").append(psiClass.getName()).append("(Builder builder) {");
+		for (PsiField field : fields) {
+			String fieldName = field.getName();
+			text.append("this.").append(fieldName).append(" = builder.").append(fieldName).append(";");
+		}
+		text.append("}");
+
+		return elementFactory.createMethodFromText(text.toString(), psiClass);
+	}
+
+	public static PsiMethod createToBuilderMethod(PsiClass psiClass, List<PsiField> fields) {
+		PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
+
+		StringBuilder text = new StringBuilder("public Builder toBuilder() {");
 		text.append("return new Builder()");
 		for (PsiField field : fields) {
 			String fieldName = field.getName();
-			text.append(".").append(fieldName).append("(").append(fieldName).append(")");
+			text.append(".").append(fieldName).append("(this.").append(fieldName).append(")");
 		}
 		text.append(";}");
 		return elementFactory.createMethodFromText(text.toString(), psiClass);
 	}
 
-
 	public static PsiMethod createBuilderMethod(PsiClass psiClass) {
 		PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
-
-		String text = "public static Builder builder() {" +
-					  "return new Builder();" +
-					  "}";
-
+		String text = "public static Builder builder() { return new Builder(); }";
 		return elementFactory.createMethodFromText(text, psiClass);
 	}
 
-	public static void removeBuilderClasses(PsiClass psiClass) {
-		PsiClass[] innerClasses = psiClass.getInnerClasses();
-		for( PsiClass innerClass : innerClasses ){
-			if( "Builder".equals(innerClass.getName()) ){
+	public static void removeBuilderArtifacts(PsiClass psiClass) {
+		// eliminar inner class Builder
+		for (PsiClass innerClass : psiClass.getInnerClasses()) {
+			if ("Builder".equals(innerClass.getName())) {
 				innerClass.delete();
 				break;
 			}
 		}
 
-		PsiMethod[] methods = psiClass.getMethods();
-		for( PsiMethod method : methods ){
-			if( "but".equals(method.getName()) && method.getParameterList().getParametersCount() == 0 ){
+		// eliminar métodos previos builder(), toBuilder() y constructor Person(Builder)
+		for (PsiMethod method : psiClass.getMethods()) {
+			String name = method.getName();
+			if ((name.equals("builder") || name.equals("toBuilder"))
+				&& method.getParameterList().getParametersCount() == 0) {
 				method.delete();
-				break;
 			}
-		}
-
-		for( PsiMethod method : methods ){
-			if( "builder".equals(method.getName()) && method.getParameterList().getParametersCount() == 0 ){
+			if (method.isConstructor() && method.getParameterList().getParametersCount() == 1
+				&& method.getParameterList().getParameters()[0].getType().getPresentableText().equals("Builder")) {
 				method.delete();
-				break;
 			}
 		}
 	}
@@ -164,4 +138,3 @@ public class BuilderClassGenerator {
 		styleManager.optimizeImports(psiClass.getContainingFile());
 	}
 }
-

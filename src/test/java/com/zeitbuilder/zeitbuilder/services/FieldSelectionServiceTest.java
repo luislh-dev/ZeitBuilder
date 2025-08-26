@@ -56,7 +56,7 @@ public class FieldSelectionServiceTest extends BasePlatformTestCase {
 		assertFalse(selection.isEmpty());
 		assertFalse(selection.isCancelled());
 		assertEquals(2, selection.getFieldNames().size());
-		assertTrue(selection.isUseInstanceBased());
+		assertTrue(selection.isIncludeInBuilder());
 	}
 
 	public void testGetAvailableFieldsExcludesInvalidFields() {
@@ -76,7 +76,7 @@ public class FieldSelectionServiceTest extends BasePlatformTestCase {
 
 	    List<FieldInfo> fields = service.getAvailableFields(psiClass);
 
-	    assertEquals(3, fields.size());
+	    assertEquals(4, fields.size());
 
 	    List<String> fieldNames = fields.stream()
 	        .map(FieldInfo::getName)
@@ -85,7 +85,7 @@ public class FieldSelectionServiceTest extends BasePlatformTestCase {
 	    assertTrue(fieldNames.contains("name"));
 	    assertTrue(fieldNames.contains("age"));
 	    assertFalse(fieldNames.contains("staticField"));
-	    assertFalse(fieldNames.contains("finalField"));
+	    assertTrue(fieldNames.contains("finalField"));
 	    assertFalse(fieldNames.contains("$syntheticField"));
 	}
 

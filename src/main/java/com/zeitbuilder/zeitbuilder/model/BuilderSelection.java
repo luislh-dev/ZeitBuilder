@@ -4,12 +4,12 @@ import java.util.List;
 
 public class BuilderSelection {
 	private final List<String> fieldNames;
-	private final boolean useInstanceBased;
+	private final boolean includeInBuilder;
 	private final boolean cancelled;
 
-	public BuilderSelection(List<String> fieldNames, boolean useInstanceBased, boolean cancelled) {
+	public BuilderSelection(List<String> fieldNames, boolean includeInBuilder, boolean cancelled) {
 		this.fieldNames = fieldNames;
-		this.useInstanceBased = useInstanceBased;
+		this.includeInBuilder = includeInBuilder;
 		this.cancelled = cancelled;
 	}
 
@@ -25,8 +25,8 @@ public class BuilderSelection {
 		return fieldNames;
 	}
 
-	public boolean isUseInstanceBased() {
-		return useInstanceBased;
+	public boolean isIncludeInBuilder() {
+		return includeInBuilder;
 	}
 
 	public boolean isCancelled() {

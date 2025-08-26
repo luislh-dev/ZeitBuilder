@@ -77,7 +77,7 @@ public class BuilderGeneratorAction extends AnAction {
 		}
 
 		WriteCommandAction.runWriteCommandAction(project, () ->
-			BuilderClassGenerator.generateBuilder(psiClass, selection.getFieldNames(), selection.isUseInstanceBased())
+			BuilderClassGenerator.generateBuilder(psiClass, selection.getFieldNames(), selection.isIncludeInBuilder())
 		);
 	}
 }

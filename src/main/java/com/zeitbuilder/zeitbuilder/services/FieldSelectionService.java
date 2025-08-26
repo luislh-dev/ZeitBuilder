@@ -19,11 +19,11 @@ public class FieldSelectionService {
 			.toList();
 	}
 
-	public BuilderSelection createSelection(List<String> selectedFields, boolean useInstanceBased) {
+	public BuilderSelection createSelection(List<String> selectedFields, boolean includeInBuilder) {
 		if (selectedFields.isEmpty()) {
 			return BuilderSelection.empty();
 		}
-		return new BuilderSelection(selectedFields, useInstanceBased, false);
+		return new BuilderSelection(selectedFields, includeInBuilder, false);
 	}
 
 	private boolean isValidField(PsiField field) {
@@ -32,8 +32,7 @@ public class FieldSelectionService {
 		String fieldName = field.getName();
 
 		if (fieldName.startsWith("$")) return false;
-		if (field.hasModifierProperty(PsiModifier.STATIC)) return false;
-		return !field.hasModifierProperty(PsiModifier.FINAL);
+		return !field.hasModifierProperty(PsiModifier.STATIC);
 	}
 
 	private boolean isDefaultSelected(PsiField field) {
