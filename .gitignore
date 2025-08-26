@@ -13,6 +13,7 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 .intellijPlatform
+.run
 
 ### Eclipse ###
 .apt_generated
@@ -41,3 +42,8 @@ bin/
 
 ### Reports ###
 htmlReport
+
+### environment files ###
+.env
+.env.local
+.env.*.local
