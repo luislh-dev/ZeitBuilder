@@ -13,9 +13,8 @@ import java.util.Arrays;
 import java.util.List;
 
 public class BuilderClassGenerator {
-	private BuilderClassGenerator() {}
 
-	public static void generateBuilder(PsiClass psiClass, List<String> fieldNames, boolean includeInBuilder) {
+	public void generateBuilder(PsiClass psiClass, List<String> fieldNames, boolean includeInBuilder) {
 		List<PsiField> selectedFields = mapNamesToFields(psiClass, fieldNames);
 
 		removeBuilderArtifacts(psiClass);
@@ -38,7 +37,7 @@ public class BuilderClassGenerator {
 
 
 	@NotNull
-	public static PsiClass createBuilderClass(PsiClass psiClass, List<PsiField> fields) {
+	public PsiClass createBuilderClass(PsiClass psiClass, List<PsiField> fields) {
 		PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
 
 		StringBuilder text = new StringBuilder("public static class Builder {");
@@ -70,7 +69,7 @@ public class BuilderClassGenerator {
 		return dummyClass.getInnerClasses()[0];
 	}
 
-	public static PsiMethod createBuilderConstructor(PsiClass psiClass, List<PsiField> fields) {
+	public PsiMethod createBuilderConstructor(PsiClass psiClass, List<PsiField> fields) {
 		PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
 
 		StringBuilder text = new StringBuilder("private ").append(psiClass.getName()).append("(Builder builder) {");
@@ -83,7 +82,7 @@ public class BuilderClassGenerator {
 		return elementFactory.createMethodFromText(text.toString(), psiClass);
 	}
 
-	public static PsiMethod createToBuilderMethod(PsiClass psiClass, List<PsiField> fields) {
+	public PsiMethod createToBuilderMethod(PsiClass psiClass, List<PsiField> fields) {
 		PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
 
 		StringBuilder text = new StringBuilder("public Builder toBuilder() {");
@@ -96,13 +95,13 @@ public class BuilderClassGenerator {
 		return elementFactory.createMethodFromText(text.toString(), psiClass);
 	}
 
-	public static PsiMethod createBuilderMethod(PsiClass psiClass) {
+	public PsiMethod createBuilderMethod(PsiClass psiClass) {
 		PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
 		String text = "public static Builder builder() { return new Builder(); }";
 		return elementFactory.createMethodFromText(text, psiClass);
 	}
 
-	public static void removeBuilderArtifacts(PsiClass psiClass) {
+	public void removeBuilderArtifacts(PsiClass psiClass) {
 		// eliminar inner class Builder
 		for (PsiClass innerClass : psiClass.getInnerClasses()) {
 			if ("Builder".equals(innerClass.getName())) {
@@ -126,13 +125,13 @@ public class BuilderClassGenerator {
 	}
 
 	@NotNull
-	private static List<PsiField> mapNamesToFields(PsiClass psiClass, List<String> selectedFieldNames) {
+	private List<PsiField> mapNamesToFields(PsiClass psiClass, List<String> selectedFieldNames) {
 		return Arrays.stream(psiClass.getFields())
 			.filter(f -> selectedFieldNames.contains(f.getName()))
 			.toList();
 	}
 
-	public static void formatClassCode(PsiClass psiClass, PsiElement builderClass) {
+	public void formatClassCode(PsiClass psiClass, PsiElement builderClass) {
 		JavaCodeStyleManager styleManager = JavaCodeStyleManager.getInstance(psiClass.getProject());
 		styleManager.shortenClassReferences(builderClass);
 		styleManager.optimizeImports(psiClass.getContainingFile());

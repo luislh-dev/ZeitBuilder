@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
+import com.zeitbuilder.zeitbuilder.generator.BuilderClassGenerator;
 import com.zeitbuilder.zeitbuilder.ui.choosers.MemberChooserProvider;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -26,11 +27,14 @@ public class BuilderGeneratorActionTest extends BasePlatformTestCase {
 	@Mock
 	private MemberChooserProvider mockMemberChooserProvider;
 
+	@Mock
+	private BuilderClassGenerator mockBuilderClassGenerator;
+
 	@Override
 	protected void setUp() throws Exception {
 		super.setUp();
 		MockitoAnnotations.openMocks(this);
-		action = new BuilderGeneratorAction(mockMemberChooserProvider);
+		action = new BuilderGeneratorAction(mockMemberChooserProvider, mockBuilderClassGenerator);
 	}
 
 	public void testUpdateShouldDisableActionWhenNoProject() {

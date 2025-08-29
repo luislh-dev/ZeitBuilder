@@ -43,6 +43,8 @@
                             serviceImplementation="com.zeitbuilder.zeitbuilder.ui.choosers.ClassMemberChooserUI"/>
 
         <applicationService serviceImplementation="com.zeitbuilder.zeitbuilder.services.FieldSelectionService"/>
+
+        <applicationService serviceImplementation="com.zeitbuilder.zeitbuilder.generator.BuilderClassGenerator" />
     </extensions>
 
     <actions>

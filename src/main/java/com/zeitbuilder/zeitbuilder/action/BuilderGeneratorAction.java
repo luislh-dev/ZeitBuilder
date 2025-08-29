@@ -20,13 +20,18 @@ import org.jetbrains.annotations.NotNull;
 public class BuilderGeneratorAction extends AnAction {
 
 	private final MemberChooserProvider memberChooserProvider;
+    private final BuilderClassGenerator builderClassGenerator;
 
 	public BuilderGeneratorAction() {
-		this(ApplicationManager.getApplication().getService(MemberChooserProvider.class));
+		this(
+			ApplicationManager.getApplication().getService(MemberChooserProvider.class),
+			ApplicationManager.getApplication().getService(BuilderClassGenerator.class)
+		);
 	}
 
-	public BuilderGeneratorAction(MemberChooserProvider memberChooserProvider) {
+	public BuilderGeneratorAction(MemberChooserProvider memberChooserProvider, BuilderClassGenerator builderClassGenerator) {
 		this.memberChooserProvider = memberChooserProvider;
+		this.builderClassGenerator = builderClassGenerator;
 	}
 
 	@Override
@@ -77,7 +82,7 @@ public class BuilderGeneratorAction extends AnAction {
 		}
 
 		WriteCommandAction.runWriteCommandAction(project, () ->
-			BuilderClassGenerator.generateBuilder(psiClass, selection.getFieldNames(), selection.isIncludeInBuilder())
+			builderClassGenerator.generateBuilder(psiClass, selection.getFieldNames(), selection.isIncludeInBuilder())
 		);
 	}
 }

@@ -12,6 +12,14 @@ import java.util.List;
 
 public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 
+	private BuilderClassGenerator builderClassGenerator;
+
+	@Override
+	protected void setUp() throws Exception {
+		super.setUp();
+		builderClassGenerator = new BuilderClassGenerator();
+	}
+
 	public void testGenerateBuilderCreatesCorrectStructure() {
 		String testCode = """
             public class Person {
@@ -24,7 +32,7 @@ public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
 
 		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
-			BuilderClassGenerator.generateBuilder(psiClass, List.of("name", "age"), false)
+			builderClassGenerator.generateBuilder(psiClass, List.of("name", "age"), false)
 		);
 
 		PsiClass[] innerClasses = psiClass.getInnerClasses();
@@ -55,7 +63,7 @@ public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
 
 		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
-			BuilderClassGenerator.generateBuilder(psiClass, List.of("name", "age"), true)
+			builderClassGenerator.generateBuilder(psiClass, List.of("name", "age"), true)
 		);
 
 		PsiClass[] innerClasses = psiClass.getInnerClasses();
@@ -110,7 +118,7 @@ public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
 
 		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
-			BuilderClassGenerator.removeBuilderArtifacts(psiClass)
+			builderClassGenerator.removeBuilderArtifacts(psiClass)
 		);
 
 		assertEquals(0, psiClass.getInnerClasses().length);
