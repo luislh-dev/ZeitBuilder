@@ -82,6 +82,54 @@ public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 		assertTrue(Arrays.stream(mainClassMethods).anyMatch(m -> "toBuilder".equals(m.getName())));
 	}
 
+	public void testGenerateRecordBuilderWithMissingFields() {
+		String testCode = """
+            public record Country(String name, int population, boolean active) {
+            }
+            """;
+
+		PsiFile file = myFixture.configureByText("Country.java", testCode);
+		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
+
+		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
+			builderClassGenerator.generateBuilder(psiClass, List.of("name"), false)
+		);
+
+		PsiClass builderClass = psiClass.getInnerClasses()[0];
+		PsiMethod buildMethod = Arrays.stream(builderClass.getMethods())
+			.filter(m -> "build".equals(m.getName()))
+			.findFirst().orElseThrow();
+
+		assertTrue(buildMethod.getText().contains("return new Country(name, 0, false);"));
+	}
+
+	public void testGenerateRecordBuilderWithAllFields() {
+		String testCode = """
+            public record Country(String name, String code) {
+            }
+            """;
+
+		PsiFile file = myFixture.configureByText("Country.java", testCode);
+		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
+
+		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
+			builderClassGenerator.generateBuilder(psiClass, List.of("name", "code"), true)
+		);
+
+		PsiClass builderClass = psiClass.getInnerClasses()[0];
+		PsiMethod buildMethod = Arrays.stream(builderClass.getMethods())
+			.filter(m -> "build".equals(m.getName()))
+			.findFirst().orElseThrow();
+
+		assertTrue(buildMethod.getText().contains("return new Country(name, code);"));
+		
+		PsiMethod toBuilderMethod = Arrays.stream(psiClass.getMethods())
+			.filter(m -> "toBuilder".equals(m.getName()))
+			.findFirst().orElseThrow();
+			
+		assertTrue(toBuilderMethod.getText().contains("new Builder().name(this.name()).code(this.code())"));
+	}
+
 	public void testRemoveBuilderArtifacts() {
 		String testCode = """
             public class Person {

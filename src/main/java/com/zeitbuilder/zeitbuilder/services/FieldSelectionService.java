@@ -13,6 +13,19 @@ import static java.util.Arrays.stream;
 public class FieldSelectionService {
 
 	public List<FieldInfo> getAvailableFields(PsiClass psiClass) {
+		if (psiClass.isRecord()) {
+			return getRecordComponents(psiClass);
+		}
+		return getClassFields(psiClass);
+	}
+
+	private List<FieldInfo> getRecordComponents(PsiClass psiClass) {
+		return stream(psiClass.getRecordComponents())
+			.map(component -> new FieldInfo(component.getName(), true))
+			.toList();
+	}
+
+	private List<FieldInfo> getClassFields(PsiClass psiClass) {
 		return stream(psiClass.getAllFields())
 			.filter(this::isValidField)
 			.map(field -> new FieldInfo(field.getName(), isDefaultSelected(field)))

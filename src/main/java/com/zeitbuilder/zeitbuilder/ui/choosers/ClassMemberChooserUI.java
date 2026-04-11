@@ -57,7 +57,7 @@ public class ClassMemberChooserUI implements MemberChooserProvider {
 
 	private FieldSelectionResult showFieldSelectionDialog(PsiClass psiClass, List<FieldInfo> fields) {
 		List<PsiFieldMember> members = fields.stream()
-			.map(fieldInfo -> findPsiFieldMember(psiClass, fieldInfo.getName()))
+			.map(fieldInfo -> findPsiFieldMember(psiClass, fieldInfo.name()))
 			.filter(Objects::nonNull)
 			.toList();
 
@@ -78,7 +78,7 @@ public class ClassMemberChooserUI implements MemberChooserProvider {
 
 		PsiFieldMember[] defaultSelected = members.stream()
 			.filter(member -> fields.stream()
-				.anyMatch(field -> field.getName().equals(member.getElement().getName()) && field.isDefaultSelected()))
+				.anyMatch(field -> field.name().equals(member.getElement().getName()) && field.defaultSelected()))
 			.toArray(PsiFieldMember[]::new);
 		chooser.selectElements(defaultSelected);
 

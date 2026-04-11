@@ -1,139 +1,102 @@
 package com.zeitbuilder.zeitbuilder.generator;
 
-import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiElementFactory;
 import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiRecordComponent;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 import java.util.List;
-
 public class BuilderClassGenerator {
 
-	public void generateBuilder(PsiClass psiClass, List<String> fieldNames, boolean includeInBuilder) {
-		List<PsiField> selectedFields = mapNamesToFields(psiClass, fieldNames);
+	private static final String BUILDER_METHOD = "builder";
+	private static final String BUILDER_CLASS = "Builder";
 
+	public void generateBuilder(PsiClass psiClass, List<String> fieldNames, boolean includeInBuilder) {
 		removeBuilderArtifacts(psiClass);
 
+		if (psiClass.isRecord()) {
+			List<PsiRecordComponent> components = mapNamesToComponents(psiClass, fieldNames);
+			generateRecordBuilder(psiClass, components, includeInBuilder);
+		} else {
+			List<PsiField> fields = mapNamesToFields(psiClass, fieldNames);
+			generateClassBuilder(psiClass, fields, includeInBuilder);
+		}
+	}
+
+	private void generateRecordBuilder(PsiClass psiClass, List<PsiRecordComponent> components, boolean includeInBuilder) {
 		PsiElement endOfClass = psiClass.getLastChild();
-
-		psiClass.addBefore(createBuilderConstructor(psiClass, selectedFields), endOfClass);
-
-		PsiElement builderClass = psiClass.addBefore(createBuilderClass(psiClass, selectedFields), endOfClass);
+		PsiClass builderClass = (PsiClass) psiClass.addBefore(CodeBuilderHelper.createRecordBuilderClass(psiClass, components), endOfClass);
 
 		PsiElement anchor = builderClass;
+		PsiMethod toBuilderMethod = null;
 		if (includeInBuilder) {
-			anchor = psiClass.addBefore(createToBuilderMethod(psiClass, selectedFields), builderClass);
+			toBuilderMethod = (PsiMethod) psiClass.addBefore(CodeBuilderHelper.createRecordToBuilderMethod(psiClass, components), builderClass);
+			anchor = toBuilderMethod;
 		}
 
-		psiClass.addBefore(createBuilderMethod(psiClass), anchor);
-
-		formatClassCode(psiClass, builderClass);
+		PsiMethod builderMethod = (PsiMethod) psiClass.addBefore(CodeBuilderHelper.createBuilderMethod(psiClass), anchor);
+		formatClassCode(psiClass, builderClass, toBuilderMethod, builderMethod);
 	}
 
+	private void generateClassBuilder(PsiClass psiClass, List<PsiField> fields, boolean includeInBuilder) {
+		PsiElement endOfClass = psiClass.getLastChild();
+		psiClass.addBefore(CodeBuilderHelper.createBuilderConstructor(psiClass, fields), endOfClass);
 
-	@NotNull
-	public PsiClass createBuilderClass(PsiClass psiClass, List<PsiField> fields) {
-		PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
+		PsiClass builderClass = (PsiClass) psiClass.addBefore(CodeBuilderHelper.createBuilderClass(psiClass, fields), endOfClass);
 
-		StringBuilder text = new StringBuilder("public static class Builder {");
-
-		// campos en el builder
-		for (PsiField field : fields) {
-			String fieldType = field.getType().getCanonicalText();
-			String fieldName = field.getName();
-			text.append("private ").append(fieldType).append(" ").append(fieldName).append(";");
+		PsiElement anchor = builderClass;
+		PsiMethod toBuilderMethod = null;
+		if (includeInBuilder) {
+			toBuilderMethod = (PsiMethod) psiClass.addBefore(CodeBuilderHelper.createToBuilderMethod(psiClass, fields), builderClass);
+			anchor = toBuilderMethod;
 		}
 
-		// métodos fluidos
-		for (PsiField field : fields) {
-			String fieldType = field.getType().getCanonicalText();
-			String fieldName = field.getName();
-			text.append("public Builder ").append(fieldName).append("(")
-				.append(fieldType).append(" ").append(fieldName).append(") {")
-				.append("this.").append(fieldName).append(" = ").append(fieldName).append(";")
-				.append("return this;")
-				.append("}");
-		}
-
-		// build()
-		text.append("public ").append(psiClass.getName()).append(" build() {")
-			.append("return new ").append(psiClass.getName()).append("(this);")
-			.append("}}");
-
-		PsiClass dummyClass = elementFactory.createClassFromText(text.toString(), psiClass);
-		return dummyClass.getInnerClasses()[0];
+		PsiMethod builderMethod = (PsiMethod) psiClass.addBefore(CodeBuilderHelper.createBuilderMethod(psiClass), anchor);
+		formatClassCode(psiClass, builderClass, toBuilderMethod, builderMethod);
 	}
 
-	public PsiMethod createBuilderConstructor(PsiClass psiClass, List<PsiField> fields) {
-		PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
-
-		StringBuilder text = new StringBuilder("private ").append(psiClass.getName()).append("(Builder builder) {");
-		for (PsiField field : fields) {
-			String fieldName = field.getName();
-			text.append("this.").append(fieldName).append(" = builder.").append(fieldName).append(";");
-		}
-		text.append("}");
-
-		return elementFactory.createMethodFromText(text.toString(), psiClass);
-	}
-
-	public PsiMethod createToBuilderMethod(PsiClass psiClass, List<PsiField> fields) {
-		PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
-
-		StringBuilder text = new StringBuilder("public Builder toBuilder() {");
-		text.append("return new Builder()");
-		for (PsiField field : fields) {
-			String fieldName = field.getName();
-			text.append(".").append(fieldName).append("(this.").append(fieldName).append(")");
-		}
-		text.append(";}");
-		return elementFactory.createMethodFromText(text.toString(), psiClass);
-	}
-
-	public PsiMethod createBuilderMethod(PsiClass psiClass) {
-		PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
-		String text = "public static Builder builder() { return new Builder(); }";
-		return elementFactory.createMethodFromText(text, psiClass);
-	}
 
 	public void removeBuilderArtifacts(PsiClass psiClass) {
-		// eliminar inner class Builder
 		for (PsiClass innerClass : psiClass.getInnerClasses()) {
-			if ("Builder".equals(innerClass.getName())) {
+			if (BUILDER_CLASS.equals(innerClass.getName())) {
 				innerClass.delete();
-				break;
 			}
 		}
-
-		// eliminar métodos previos builder(), toBuilder() y constructor Person(Builder)
 		for (PsiMethod method : psiClass.getMethods()) {
-			String name = method.getName();
-			if ((name.equals("builder") || name.equals("toBuilder"))
-				&& method.getParameterList().getParametersCount() == 0) {
-				method.delete();
-			}
-			if (method.isConstructor() && method.getParameterList().getParametersCount() == 1
-				&& method.getParameterList().getParameters()[0].getType().getPresentableText().equals("Builder")) {
+			boolean isBuilderMethod = method.getName().equals(BUILDER_METHOD) || method.getName().equals("toBuilder");
+			boolean isBuilderConstructor = method.isConstructor()
+										   && method.getParameterList().getParametersCount() == 1
+										   && BUILDER_CLASS.equals(method.getParameterList().getParameters()[0].getType().getPresentableText());
+
+			if ((isBuilderMethod && method.getParameterList().isEmpty()) || isBuilderConstructor) {
 				method.delete();
 			}
 		}
 	}
 
 	@NotNull
-	private List<PsiField> mapNamesToFields(PsiClass psiClass, List<String> selectedFieldNames) {
-		return Arrays.stream(psiClass.getFields())
-			.filter(f -> selectedFieldNames.contains(f.getName()))
+	private List<PsiRecordComponent> mapNamesToComponents(PsiClass psiClass, List<String> names) {
+		return Arrays.stream(psiClass.getRecordComponents())
+			.filter(c -> names.contains(c.getName()))
 			.toList();
 	}
 
-	public void formatClassCode(PsiClass psiClass, PsiElement builderClass) {
+	@NotNull
+	private List<PsiField> mapNamesToFields(PsiClass psiClass, List<String> names) {
+		return Arrays.stream(psiClass.getFields())
+			.filter(f -> names.contains(f.getName()))
+			.toList();
+	}
+
+	public void formatClassCode(PsiClass psiClass, PsiElement builderClass, PsiMethod toBuilderMethod, PsiMethod builderMethod) {
 		JavaCodeStyleManager styleManager = JavaCodeStyleManager.getInstance(psiClass.getProject());
 		styleManager.shortenClassReferences(builderClass);
+		if (toBuilderMethod != null) styleManager.shortenClassReferences(toBuilderMethod);
+		if (builderMethod != null) styleManager.shortenClassReferences(builderMethod);
 		styleManager.optimizeImports(psiClass.getContainingFile());
 	}
 }

@@ -35,17 +35,17 @@ public class FieldSelectionServiceTest extends BasePlatformTestCase {
 		assertEquals(3, fields.size());
 
 		FieldInfo nameField = fields.stream()
-			.filter(f -> "name".equals(f.getName()))
+			.filter(f -> "name".equals(f.name()))
 			.findFirst().orElse(null);
 		assertNotNull(nameField);
-		assertTrue(nameField.isDefaultSelected());
+		assertTrue(nameField.defaultSelected());
 
 		FieldInfo serialField = fields.stream()
-			.filter(f -> "serialVersionUID".equals(f.getName()))
+			.filter(f -> "serialVersionUID".equals(f.name()))
 			.findFirst().orElse(null);
 
 		assertNotNull(serialField);
-		assertFalse(serialField.isDefaultSelected());
+		assertFalse(serialField.defaultSelected());
 	}
 
 	public void testCreateSelectionWithFields() {
@@ -79,7 +79,7 @@ public class FieldSelectionServiceTest extends BasePlatformTestCase {
 	    assertEquals(4, fields.size());
 
 	    List<String> fieldNames = fields.stream()
-	        .map(FieldInfo::getName)
+	        .map(FieldInfo::name)
 	        .toList();
 
 	    assertTrue(fieldNames.contains("name"));
