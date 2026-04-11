@@ -82,6 +82,57 @@ public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 		assertTrue(Arrays.stream(mainClassMethods).anyMatch(m -> "toBuilder".equals(m.getName())));
 	}
 
+	public void testGenerateBuilderCreatesNoArgsConstructorWhenNoFinalFields() {
+		String testCode = """
+            public class Person {
+                private String name;
+            }
+            """;
+
+		PsiFile file = myFixture.configureByText("Person.java", testCode);
+		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
+
+		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
+			builderClassGenerator.generateBuilder(psiClass, List.of("name"), false)
+		);
+
+		PsiMethod[] constructors = psiClass.getConstructors();
+		assertTrue("Class should have a no-args constructor",
+			Arrays.stream(constructors).anyMatch(m -> m.getParameterList().isEmpty()));
+
+		assertTrue("Class should have a private Builder constructor",
+			Arrays.stream(constructors).anyMatch(m ->
+				m.getParameterList().getParametersCount() == 1 &&
+				m.getParameterList().getParameters()[0].getType().getPresentableText().equals("Builder")
+			));
+	}
+
+	public void testGenerateBuilderDoesNotCreateNoArgsConstructorWhenFinalFieldUsed() {
+		String testCode = """
+            public class Person {
+                private final String identifier;
+                private String name;
+            }
+            """;
+
+		PsiFile file = myFixture.configureByText("Person.java", testCode);
+		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
+
+		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
+			builderClassGenerator.generateBuilder(psiClass, List.of("name", "identifier"), false)
+		);
+
+		PsiMethod[] constructors = psiClass.getConstructors();
+		assertFalse("Class should NOT have a no-args constructor due to uninitialized final field",
+			Arrays.stream(constructors).anyMatch(m -> m.getParameterList().isEmpty()));
+
+		assertTrue("Class should still have a private Builder constructor",
+			Arrays.stream(constructors).anyMatch(m ->
+				m.getParameterList().getParametersCount() == 1 &&
+				m.getParameterList().getParameters()[0].getType().getPresentableText().equals("Builder")
+			));
+	}
+
 	public void testGenerateRecordBuilderWithMissingFields() {
 		String testCode = """
             public record Country(String name, int population, boolean active) {

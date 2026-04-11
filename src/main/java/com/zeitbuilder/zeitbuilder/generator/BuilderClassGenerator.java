@@ -44,8 +44,34 @@ public class BuilderClassGenerator {
 
 	private void generateClassBuilder(PsiClass psiClass, List<PsiField> fields, boolean includeInBuilder) {
 		PsiElement endOfClass = psiClass.getLastChild();
-		psiClass.addBefore(CodeBuilderHelper.createBuilderConstructor(psiClass, fields), endOfClass);
 
+		boolean hasNoArgsConstructor = false;
+		PsiMethod[] constructors = psiClass.getConstructors();
+		for (PsiMethod constructor : constructors) {
+			if (constructor.getParameterList().isEmpty()) {
+				hasNoArgsConstructor = true;
+				break;
+			}
+		}
+
+		if (!hasNoArgsConstructor) {
+            // Check if any of the fields in the class are final and not initialized.
+			// If they are final, a no-args constructor without initializing them will cause a compilation error.
+			boolean hasFinalFields = false;
+			for (PsiField field : psiClass.getFields()) {
+				if (field.hasModifierProperty(com.intellij.psi.PsiModifier.FINAL) && field.getInitializer() == null) {
+					hasFinalFields = true;
+					break;
+				}
+			}
+
+			if (!hasFinalFields) {
+				psiClass.addBefore(CodeBuilderHelper.createNoArgsConstructor(psiClass), endOfClass);
+			}
+		}
+
+		psiClass.addBefore(CodeBuilderHelper.createBuilderConstructor(psiClass, fields), endOfClass);
+		
 		PsiClass builderClass = (PsiClass) psiClass.addBefore(CodeBuilderHelper.createBuilderClass(psiClass, fields), endOfClass);
 
 		PsiElement anchor = builderClass;

@@ -65,6 +65,11 @@ public class CodeBuilderHelper {
 		return JavaPsiFacade.getElementFactory(psiClass.getProject()).createMethodFromText(body, psiClass);
 	}
 
+	public static PsiMethod createNoArgsConstructor(PsiClass psiClass) {
+		String body = "public " + psiClass.getName() + "() {}";
+		return JavaPsiFacade.getElementFactory(psiClass.getProject()).createMethodFromText(body, psiClass);
+	}
+
 	public static PsiMethod createToBuilderMethod(PsiClass psiClass, List<PsiField> fields) {
 		String bClass = psiClass.getName() + ".Builder";
 		String body = "public " + bClass + " toBuilder() { return new " + bClass + "()"
