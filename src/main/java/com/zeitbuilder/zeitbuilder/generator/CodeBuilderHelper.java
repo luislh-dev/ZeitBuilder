@@ -6,6 +6,7 @@ import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiRecordComponent;
 import com.intellij.psi.PsiType;
+import com.intellij.psi.PsiTypes;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -98,12 +99,12 @@ public class CodeBuilderHelper {
 	}
 
 	private static String getDefaultValue(PsiType type) {
-		if (PsiType.BOOLEAN.equals(type)) return "false";
-		if (PsiType.BYTE.equals(type) || PsiType.SHORT.equals(type) || PsiType.INT.equals(type)) return "0";
-		if (PsiType.LONG.equals(type)) return "0L";
-		if (PsiType.FLOAT.equals(type)) return "0.0f";
-		if (PsiType.DOUBLE.equals(type)) return "0.0d";
-		if (PsiType.CHAR.equals(type)) return "'\\u0000'";
+		if (PsiTypes.booleanType().equals(type)) return "false";
+		if (PsiTypes.byteType().equals(type) || PsiTypes.shortType().equals(type) || PsiTypes.intType().equals(type)) return "0";
+		if (PsiTypes.longType().equals(type)) return "0L";
+		if (PsiTypes.floatType().equals(type)) return "0.0f";
+		if (PsiTypes.doubleType().equals(type)) return "0.0d";
+		if (PsiTypes.charType().equals(type)) return "'\\u0000'";
 		return "null";
 	}
 
