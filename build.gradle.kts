@@ -5,7 +5,7 @@ plugins {
 }
 
 val mockitoVersion = "5.5.0"
-val assertjVersion = "3.24.2"
+val assertjVersion = "3.27.7"
 val junitVersion = "4.13.2"
 
 group = "com.zeitbuilder"
