@@ -9,7 +9,8 @@ val assertjVersion = "3.27.7"
 val junitVersion = "4.13.2"
 
 group = "com.zeitbuilder"
-version = System.getenv("GITHUB_REF_NAME")?.removePrefix("v") ?: "1.0.0-SNAPSHOT"
+val pluginVersion = System.getenv("RELEASE_VERSION") ?: "1.0.1-SNAPSHOT"
+version = pluginVersion
 
 repositories {
     mavenCentral()
@@ -41,15 +42,10 @@ intellijPlatform {
             sinceBuild = "231"
         }
 
-        changeNotes = """
-            <ul>
-                <li>feat: agregar soporte para generadores de builders extensibles</li>
-                <li>fix: genera automáticamente constructor sin argumentos, excepto cuando existen propiedades final</li>
-                <li>build: actualizar versión de AssertJ a 3.27.7</li>
-                <li>refactor: migrar uso de constantes PsiType obsoletas</li>
-                <li>feat: agregar soporte para generadores de builders de records</li>
-            </ul>
-        """.trimIndent()
+        val rawChangelog = System.getenv("RELEASE_CHANGELOG") ?: "<ul><li>Local build / Snapshot</li></ul>"
+        changeNotes = "<![CDATA[\n$rawChangelog\n]]>"
+        
+        version = pluginVersion
     }
 
 }
@@ -60,8 +56,16 @@ tasks {
         targetCompatibility = "21"
     }
 
+    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+        kotlinOptions.jvmTarget = "17"
+    }
+
     test {
         useJUnit()
+    }
+
+    signPlugin {
+        // Configuration for signing the plugin
     }
 
     publishPlugin {

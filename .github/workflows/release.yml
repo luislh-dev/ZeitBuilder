@@ -1,41 +1,89 @@
-name: Release
+name: Generate Release & Publish
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Force version bump (optional)'
+        required: false
+        type: choice
+        default: 'auto'
+        options:
+          - auto
+          - patch
+          - minor
+          - major
 
 jobs:
-  publish:
+  release:
+    name: Build, Publish and Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup JDK 21
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate Version and Changelog
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dry_run: true
+          default_bump: false
+          custom_release_rules: feat:minor,fix:patch,chore:patch
+
+      - name: Check version bump
+        if: steps.tag_version.outputs.new_version == ''
+        run: |
+          echo "No new version to publish. Exiting."
+          exit 1
+
+      - name: Convert Markdown to HTML for JetBrains (local)
+        id: convert_notes
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+          printf "%s" "${{ steps.tag_version.outputs.changelog }}" > CHANGELOG.md
+          pandoc -f gfm -t html CHANGELOG.md -o CHANGELOG.html
+          {
+            echo "html<<EOF"
+            cat CHANGELOG.html
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
+          distribution: 'corretto'
           java-version: '21'
-          distribution: 'temurin'
-          cache: 'gradle'
-      - run: chmod +x gradlew
 
-      - name: Build plugin
-        run: ./gradlew buildPlugin
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
-      - name: Publish Plugin to JetBrains Marketplace
-        run: ./gradlew publishPlugin
+      - name: Build and Test
         env:
-          JETBRAINS_PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}
-          CHANNEL: ${{
-            contains(github.ref_name, 'alpha') && 'alpha' ||
-            (contains(github.ref_name, 'beta') && 'beta' || 'default')
-            }}
+          RELEASE_VERSION: ${{ steps.tag_version.outputs.new_version }}
+          RELEASE_CHANGELOG: ${{ steps.convert_notes.outputs.html }}
+        run: ./gradlew buildPlugin test
+
+      - name: Publish to JetBrains Marketplace
+        env:
+          JETBRAINS_PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+          RELEASE_VERSION: ${{ steps.tag_version.outputs.new_version }}
+          RELEASE_CHANGELOG: ${{ steps.convert_notes.outputs.html }}
+        run: ./gradlew publishPlugin
 
       - name: Create GitHub Release
+        if: steps.tag_version.outputs.new_version != ''
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body: |
-            🚀 Published plugin version ${{ github.ref_name }}
+          tag_name: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_version }}
+          body: ${{ steps.tag_version.outputs.changelog }}
+          files: build/distributions/*
         env:
-          GITHUB_TOKEN: ${{ github.token  }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
