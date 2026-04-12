@@ -6,16 +6,18 @@ import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiRecordComponent;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
+import com.zeitbuilder.zeitbuilder.model.HierarchyType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 import java.util.List;
+
 public class BuilderClassGenerator {
 
 	private static final String BUILDER_METHOD = "builder";
 	private static final String BUILDER_CLASS = "Builder";
 
-	public void generateBuilder(PsiClass psiClass, List<String> fieldNames, boolean includeInBuilder) {
+	public void generateBuilder(PsiClass psiClass, List<String> fieldNames, boolean includeInBuilder, HierarchyType hierarchyType) {
 		removeBuilderArtifacts(psiClass);
 
 		if (psiClass.isRecord()) {
@@ -23,7 +25,11 @@ public class BuilderClassGenerator {
 			generateRecordBuilder(psiClass, components, includeInBuilder);
 		} else {
 			List<PsiField> fields = mapNamesToFields(psiClass, fieldNames);
-			generateClassBuilder(psiClass, fields, includeInBuilder);
+			if (hierarchyType == HierarchyType.EXTENSIBLE) {
+				generateExtensibleClassBuilder(psiClass, fields, includeInBuilder);
+			} else {
+				generateClassBuilder(psiClass, fields, includeInBuilder);
+			}
 		}
 	}
 
@@ -45,33 +51,16 @@ public class BuilderClassGenerator {
 	private void generateClassBuilder(PsiClass psiClass, List<PsiField> fields, boolean includeInBuilder) {
 		PsiElement endOfClass = psiClass.getLastChild();
 
-		boolean hasNoArgsConstructor = false;
-		PsiMethod[] constructors = psiClass.getConstructors();
-		for (PsiMethod constructor : constructors) {
-			if (constructor.getParameterList().isEmpty()) {
-				hasNoArgsConstructor = true;
-				break;
-			}
-		}
-
-		if (!hasNoArgsConstructor) {
-            // Check if any of the fields in the class are final and not initialized.
+		if (!hasNoArgsConstructor(psiClass)) {
+			// Check if any of the fields in the class are final and not initialized.
 			// If they are final, a no-args constructor without initializing them will cause a compilation error.
-			boolean hasFinalFields = false;
-			for (PsiField field : psiClass.getFields()) {
-				if (field.hasModifierProperty(com.intellij.psi.PsiModifier.FINAL) && field.getInitializer() == null) {
-					hasFinalFields = true;
-					break;
-				}
-			}
-
-			if (!hasFinalFields) {
+			if (!hasUninitializedFinalFields(psiClass)) {
 				psiClass.addBefore(CodeBuilderHelper.createNoArgsConstructor(psiClass), endOfClass);
 			}
 		}
 
 		psiClass.addBefore(CodeBuilderHelper.createBuilderConstructor(psiClass, fields), endOfClass);
-		
+
 		PsiClass builderClass = (PsiClass) psiClass.addBefore(CodeBuilderHelper.createBuilderClass(psiClass, fields), endOfClass);
 
 		PsiElement anchor = builderClass;
@@ -85,10 +74,37 @@ public class BuilderClassGenerator {
 		formatClassCode(psiClass, builderClass, toBuilderMethod, builderMethod);
 	}
 
+	private void generateExtensibleClassBuilder(PsiClass psiClass, List<PsiField> fields, boolean includeInBuilder) {
+		PsiElement endOfClass = psiClass.getLastChild();
+
+		if (!hasNoArgsConstructor(psiClass)) {
+			if (!hasUninitializedFinalFields(psiClass)) {
+				psiClass.addBefore(CodeBuilderHelper.createNoArgsConstructor(psiClass), endOfClass);
+			}
+		}
+
+		psiClass.addBefore(CodeBuilderHelper.createExtensibleBuilderConstructor(psiClass, fields), endOfClass);
+		
+		PsiClass abstractBuilderClass = (PsiClass) psiClass.addBefore(CodeBuilderHelper.createExtensibleAbstractBuilderClass(psiClass, fields), endOfClass);
+		PsiClass implBuilderClass = (PsiClass) psiClass.addBefore(CodeBuilderHelper.createExtensibleImplBuilderClass(psiClass), endOfClass);
+
+		PsiElement anchor = abstractBuilderClass;
+		PsiMethod toBuilderMethod = null;
+		if (includeInBuilder) {
+			toBuilderMethod = (PsiMethod) psiClass.addBefore(CodeBuilderHelper.createExtensibleToBuilderMethod(psiClass, fields), abstractBuilderClass);
+			anchor = toBuilderMethod;
+		}
+
+		PsiMethod builderMethod = (PsiMethod) psiClass.addBefore(CodeBuilderHelper.createExtensibleBuilderMethod(psiClass), anchor);
+		formatClassCode(psiClass, abstractBuilderClass, toBuilderMethod, builderMethod);
+
+		// Format also the implBuilderClass
+		com.intellij.psi.codeStyle.JavaCodeStyleManager.getInstance(psiClass.getProject()).shortenClassReferences(implBuilderClass);
+	}
 
 	public void removeBuilderArtifacts(PsiClass psiClass) {
 		for (PsiClass innerClass : psiClass.getInnerClasses()) {
-			if (BUILDER_CLASS.equals(innerClass.getName())) {
+			if (BUILDER_CLASS.equals(innerClass.getName()) || (psiClass.getName() + "BuilderImpl").equals(innerClass.getName())) {
 				innerClass.delete();
 			}
 		}
@@ -116,6 +132,24 @@ public class BuilderClassGenerator {
 		return Arrays.stream(psiClass.getFields())
 			.filter(f -> names.contains(f.getName()))
 			.toList();
+	}
+
+	private boolean hasNoArgsConstructor(PsiClass psiClass) {
+		for (PsiMethod constructor : psiClass.getConstructors()) {
+			if (constructor.getParameterList().isEmpty()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean hasUninitializedFinalFields(PsiClass psiClass) {
+		for (PsiField field : psiClass.getFields()) {
+			if (field.hasModifierProperty(com.intellij.psi.PsiModifier.FINAL) && field.getInitializer() == null) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public void formatClassCode(PsiClass psiClass, PsiElement builderClass, PsiMethod toBuilderMethod, PsiMethod builderMethod) {

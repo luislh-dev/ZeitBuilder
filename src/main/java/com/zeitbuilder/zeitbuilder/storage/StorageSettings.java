@@ -3,6 +3,7 @@ package com.zeitbuilder.zeitbuilder.storage;
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.components.State;
+import com.zeitbuilder.zeitbuilder.model.HierarchyType;
 import com.zeitbuilder.zeitbuilder.model.Storage;
 import org.jetbrains.annotations.NotNull;
 
@@ -22,6 +23,14 @@ public final class StorageSettings implements PersistentStateComponent<Storage> 
 		storage.setUseInstanceBased(value);
 	}
 
+	public HierarchyType getHierarchyType() {
+		return storage.getHierarchyType();
+	}
+
+	public void setHierarchyType(HierarchyType hierarchyType) {
+		storage.setHierarchyType(hierarchyType);
+	}
+
 	@Override
 	public @NotNull Storage getState() {
 		return storage;
@@ -30,6 +39,6 @@ public final class StorageSettings implements PersistentStateComponent<Storage> 
 	@Override
 	public void loadState(@NotNull Storage storage) {
 		this.storage.setUseInstanceBased(storage.getUseInstanceBased());
+		this.storage.setHierarchyType(storage.getHierarchyType());
 	}
 }
-

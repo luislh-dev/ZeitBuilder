@@ -5,6 +5,7 @@ import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiModifier;
 import com.zeitbuilder.zeitbuilder.domain.models.FieldInfo;
 import com.zeitbuilder.zeitbuilder.model.BuilderSelection;
+import com.zeitbuilder.zeitbuilder.model.HierarchyType;
 
 import java.util.List;
 
@@ -32,11 +33,11 @@ public class FieldSelectionService {
 			.toList();
 	}
 
-	public BuilderSelection createSelection(List<String> selectedFields, boolean includeInBuilder) {
+	public BuilderSelection createSelection(List<String> selectedFields, boolean includeInBuilder, HierarchyType hierarchyType) {
 		if (selectedFields.isEmpty()) {
 			return BuilderSelection.empty();
 		}
-		return new BuilderSelection(selectedFields, includeInBuilder, false);
+		return new BuilderSelection(selectedFields, includeInBuilder, false, hierarchyType);
 	}
 
 	private boolean isValidField(PsiField field) {

@@ -9,11 +9,83 @@ import com.intellij.psi.PsiType;
 import com.intellij.psi.PsiTypes;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
 import java.util.Arrays;
+import java.util.List;
 
 public class CodeBuilderHelper {
 	private static final String BUILDER_CLASS = "public static class Builder {";
+
+	public static PsiMethod createExtensibleBuilderConstructor(PsiClass psiClass, List<PsiField> fields) {
+		StringBuilder body = new StringBuilder("protected " + psiClass.getName() + "(Builder<?, ?> builder) {");
+
+		// If it has a superclass that is not Object, call super(builder)
+		PsiClass superClass = psiClass.getSuperClass();
+		if (superClass != null && !"java.lang.Object".equals(superClass.getQualifiedName())) {
+			body.append("super(builder);");
+		}
+
+		fields.forEach(f -> body.append("this.").append(f.getName()).append(" = builder.").append(f.getName()).append(";"));
+		body.append("}");
+		return JavaPsiFacade.getElementFactory(psiClass.getProject()).createMethodFromText(body.toString(), psiClass);
+	}
+
+	public static PsiClass createExtensibleAbstractBuilderClass(PsiClass psiClass, List<PsiField> fields) {
+		String className = psiClass.getName();
+		StringBuilder text = new StringBuilder();
+		text.append("public static abstract class Builder<C extends ").append(className).append(", B extends Builder<C, B>>");
+
+		PsiClass superClass = psiClass.getSuperClass();
+		if (superClass != null && !"java.lang.Object".equals(superClass.getQualifiedName())) {
+			text.append(" extends ").append(superClass.getName()).append(".Builder<C, B>");
+		}
+		text.append(" {");
+
+		fields.forEach(f -> text.append("private ").append(f.getType().getCanonicalText())
+			.append(" ").append(f.getName()).append(";"));
+
+		fields.forEach(f -> text.append("public B ").append(f.getName()).append("(")
+			.append(f.getType().getCanonicalText()).append(" ").append(f.getName()).append(") {")
+			.append("this.").append(f.getName()).append(" = ").append(f.getName()).append(";")
+			.append("return self(); }"));
+
+		text.append("protected abstract B self();");
+		text.append("public abstract C build(); }");
+
+		return toPsiInnerClass(psiClass, text.toString());
+	}
+
+	public static PsiClass createExtensibleImplBuilderClass(PsiClass psiClass) {
+		String className = psiClass.getName();
+		String implName = className + "BuilderImpl";
+
+		String text = "private static final class " + implName +
+					  " extends " + "Builder<" + className + ", " + implName + "> {" +
+					  "@java.lang.Override\n" +
+					  "protected " + implName + " self() { return this; }" +
+					  "@java.lang.Override\n" +
+					  "public " + className + " build() { return new " + className + "(this); }" +
+					  "}";
+		return toPsiInnerClass(psiClass, text);
+	}
+
+	public static PsiMethod createExtensibleToBuilderMethod(PsiClass psiClass, List<PsiField> fields) {
+		String implName = psiClass.getName() + "BuilderImpl";
+		StringBuilder body = new StringBuilder("public Builder<?, ?> toBuilder() { return new " + implName + "()");
+
+		// Fields from parent are difficult to get exactly, but standard get methods might exist
+		// For simplicity here, we only do the current level, ideally we would iterate through supers
+
+		fields.forEach(f -> body.append(".").append(f.getName()).append("(this.").append(f.getName()).append(")"));
+		body.append(";}");
+
+		return JavaPsiFacade.getElementFactory(psiClass.getProject()).createMethodFromText(body.toString(), psiClass);
+	}
+
+	public static PsiMethod createExtensibleBuilderMethod(PsiClass psiClass) {
+		String implName = psiClass.getName() + "BuilderImpl";
+		return JavaPsiFacade.getElementFactory(psiClass.getProject())
+			.createMethodFromText("public static Builder<?, ?> builder() { return new " + implName + "(); }", psiClass);
+	}
 
 	@NotNull
 	public static PsiClass createRecordBuilderClass(PsiClass psiClass, List<PsiRecordComponent> components) {
@@ -24,11 +96,11 @@ public class CodeBuilderHelper {
 
 		text.append("public ").append(psiClass.getName()).append(" build() {")
 			.append("return new ").append(psiClass.getName()).append("(");
-			
+
 		List<String> args = Arrays.stream(psiClass.getRecordComponents())
 			.map(c -> components.contains(c) ? c.getName() : getDefaultValue(c.getType()))
 			.toList();
-			
+
 		text.append(String.join(", ", args))
 			.append(");}}");
 
@@ -105,7 +177,8 @@ public class CodeBuilderHelper {
 
 	private static String getDefaultValue(PsiType type) {
 		if (PsiTypes.booleanType().equals(type)) return "false";
-		if (PsiTypes.byteType().equals(type) || PsiTypes.shortType().equals(type) || PsiTypes.intType().equals(type)) return "0";
+		if (PsiTypes.byteType().equals(type) || PsiTypes.shortType().equals(type) || PsiTypes.intType().equals(type))
+			return "0";
 		if (PsiTypes.longType().equals(type)) return "0L";
 		if (PsiTypes.floatType().equals(type)) return "0.0f";
 		if (PsiTypes.doubleType().equals(type)) return "0.0d";
@@ -113,5 +186,6 @@ public class CodeBuilderHelper {
 		return "null";
 	}
 
-	private record FieldData(PsiType type, String name) {}
+	private record FieldData(PsiType type, String name) {
+	}
 }

@@ -46,12 +46,13 @@ public class FieldSelectionServiceTest extends BasePlatformTestCase {
 
 		assertNotNull(serialField);
 		assertFalse(serialField.defaultSelected());
+
 	}
 
 	public void testCreateSelectionWithFields() {
 		List<String> fields = List.of("name", "age");
 
-		BuilderSelection selection = service.createSelection(fields, true);
+		BuilderSelection selection = service.createSelection(fields, true, com.zeitbuilder.zeitbuilder.model.HierarchyType.STANDARD);
 
 		assertFalse(selection.isEmpty());
 		assertFalse(selection.isCancelled());
@@ -90,7 +91,7 @@ public class FieldSelectionServiceTest extends BasePlatformTestCase {
 	}
 
 	public void testCreateSelectionEmpty() {
-		BuilderSelection selection = service.createSelection(List.of(), false);
+		BuilderSelection selection = service.createSelection(List.of(), false, com.zeitbuilder.zeitbuilder.model.HierarchyType.STANDARD);
 
 		assertTrue(selection.isEmpty());
 		assertFalse(selection.isCancelled());

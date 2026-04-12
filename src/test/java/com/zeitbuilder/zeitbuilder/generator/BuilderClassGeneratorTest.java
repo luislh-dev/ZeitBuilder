@@ -32,7 +32,7 @@ public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
 
 		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
-			builderClassGenerator.generateBuilder(psiClass, List.of("name", "age"), false)
+			builderClassGenerator.generateBuilder(psiClass, List.of("name", "age"), false, com.zeitbuilder.zeitbuilder.model.HierarchyType.STANDARD)
 		);
 
 		PsiClass[] innerClasses = psiClass.getInnerClasses();
@@ -63,7 +63,7 @@ public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
 
 		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
-			builderClassGenerator.generateBuilder(psiClass, List.of("name", "age"), true)
+			builderClassGenerator.generateBuilder(psiClass, List.of("name", "age"), true, com.zeitbuilder.zeitbuilder.model.HierarchyType.STANDARD)
 		);
 
 		PsiClass[] innerClasses = psiClass.getInnerClasses();
@@ -93,7 +93,7 @@ public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
 
 		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
-			builderClassGenerator.generateBuilder(psiClass, List.of("name"), false)
+			builderClassGenerator.generateBuilder(psiClass, List.of("name"), false, com.zeitbuilder.zeitbuilder.model.HierarchyType.STANDARD)
 		);
 
 		PsiMethod[] constructors = psiClass.getConstructors();
@@ -119,7 +119,7 @@ public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
 
 		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
-			builderClassGenerator.generateBuilder(psiClass, List.of("name", "identifier"), false)
+			builderClassGenerator.generateBuilder(psiClass, List.of("name", "identifier"), false, com.zeitbuilder.zeitbuilder.model.HierarchyType.STANDARD)
 		);
 
 		PsiMethod[] constructors = psiClass.getConstructors();
@@ -143,7 +143,7 @@ public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
 
 		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
-			builderClassGenerator.generateBuilder(psiClass, List.of("name"), false)
+			builderClassGenerator.generateBuilder(psiClass, List.of("name"), false, com.zeitbuilder.zeitbuilder.model.HierarchyType.STANDARD)
 		);
 
 		PsiClass builderClass = psiClass.getInnerClasses()[0];
@@ -164,7 +164,7 @@ public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
 
 		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
-			builderClassGenerator.generateBuilder(psiClass, List.of("name", "code"), true)
+			builderClassGenerator.generateBuilder(psiClass, List.of("name", "code"), true, com.zeitbuilder.zeitbuilder.model.HierarchyType.STANDARD)
 		);
 
 		PsiClass builderClass = psiClass.getInnerClasses()[0];
@@ -230,5 +230,63 @@ public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 			m.getParameterList().getParametersCount() == 1 &&
 			m.getParameterList().getParameters()[0].getType().getPresentableText().equals("Builder")
 		));
+	}
+
+	public void testGenerateExtensibleBuilderCreatesCorrectStructure() {
+		String testCode = """
+            public class Employee extends Person {
+                private String department;
+            }
+            class Person {
+                private String name;
+            }
+            """;
+
+		PsiFile file = myFixture.configureByText("Employee.java", testCode);
+		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0]; // Employee
+
+		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
+			builderClassGenerator.generateBuilder(psiClass, List.of("department"), false, com.zeitbuilder.zeitbuilder.model.HierarchyType.EXTENSIBLE)
+		);
+
+		PsiClass[] innerClasses = psiClass.getInnerClasses();
+		assertEquals(2, innerClasses.length); // Abstract Builder and Impl Builder
+
+		boolean hasAbstractBuilder = Arrays.stream(innerClasses).anyMatch(c -> "Builder".equals(c.getName()));
+		boolean hasImplBuilder = Arrays.stream(innerClasses).anyMatch(c -> "EmployeeBuilderImpl".equals(c.getName()));
+		assertTrue("Missing abstract Builder class", hasAbstractBuilder);
+		assertTrue("Missing Impl Builder class", hasImplBuilder);
+
+		PsiMethod[] methods = psiClass.getMethods();
+		assertTrue("Missing builder() method", Arrays.stream(methods).anyMatch(m -> "builder".equals(m.getName())));
+		
+		// Should have protected constructor with Builder<?, ?>
+		assertTrue("Missing protected constructor taking Builder<?, ?>", Arrays.stream(methods).anyMatch(m ->
+				m.isConstructor() &&
+				m.hasModifierProperty("protected") &&
+				m.getParameterList().getParametersCount() == 1 &&
+				m.getParameterList().getParameters()[0].getType().getPresentableText().startsWith("Builder")
+		));
+
+		assertFalse("Should not have toBuilder by default", Arrays.stream(methods).anyMatch(m -> "toBuilder".equals(m.getName())));
+	}
+
+	public void testGenerateExtensibleBuilderWithToBuilderMethod() {
+		String testCode = """
+            public class Developer {
+                private String language;
+            }
+            """;
+
+		PsiFile file = myFixture.configureByText("Developer.java", testCode);
+		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
+
+		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
+			builderClassGenerator.generateBuilder(psiClass, List.of("language"), true, com.zeitbuilder.zeitbuilder.model.HierarchyType.EXTENSIBLE)
+		);
+
+		PsiMethod[] mainClassMethods = psiClass.getMethods();
+		assertTrue("Missing builder() method", Arrays.stream(mainClassMethods).anyMatch(m -> "builder".equals(m.getName())));
+		assertTrue("Missing toBuilder() method", Arrays.stream(mainClassMethods).anyMatch(m -> "toBuilder".equals(m.getName())));
 	}
 }

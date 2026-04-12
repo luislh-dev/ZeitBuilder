@@ -20,7 +20,7 @@ import org.jetbrains.annotations.NotNull;
 public class BuilderGeneratorAction extends AnAction {
 
 	private final MemberChooserProvider memberChooserProvider;
-    private final BuilderClassGenerator builderClassGenerator;
+	private final BuilderClassGenerator builderClassGenerator;
 
 	public BuilderGeneratorAction() {
 		this(
@@ -82,7 +82,7 @@ public class BuilderGeneratorAction extends AnAction {
 		}
 
 		WriteCommandAction.runWriteCommandAction(project, () ->
-			builderClassGenerator.generateBuilder(psiClass, selection.getFieldNames(), selection.isIncludeInBuilder())
+			builderClassGenerator.generateBuilder(psiClass, selection.getFieldNames(), selection.isIncludeInBuilder(), selection.getHierarchyType())
 		);
 	}
 }
