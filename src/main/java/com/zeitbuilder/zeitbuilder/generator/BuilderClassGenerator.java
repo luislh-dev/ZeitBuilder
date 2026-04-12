@@ -110,9 +110,12 @@ public class BuilderClassGenerator {
 		}
 		for (PsiMethod method : psiClass.getMethods()) {
 			boolean isBuilderMethod = method.getName().equals(BUILDER_METHOD) || method.getName().equals("toBuilder");
-			boolean isBuilderConstructor = method.isConstructor()
-										   && method.getParameterList().getParametersCount() == 1
-										   && BUILDER_CLASS.equals(method.getParameterList().getParameters()[0].getType().getPresentableText());
+			
+			boolean isBuilderConstructor = false;
+			if (method.isConstructor() && method.getParameterList().getParametersCount() == 1) {
+				String paramTypeText = method.getParameterList().getParameters()[0].getType().getPresentableText();
+				isBuilderConstructor = paramTypeText.equals(BUILDER_CLASS) || paramTypeText.startsWith(BUILDER_CLASS + "<");
+			}
 
 			if ((isBuilderMethod && method.getParameterList().isEmpty()) || isBuilderConstructor) {
 				method.delete();

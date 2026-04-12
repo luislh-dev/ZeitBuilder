@@ -289,4 +289,33 @@ public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 		assertTrue("Missing builder() method", Arrays.stream(mainClassMethods).anyMatch(m -> "builder".equals(m.getName())));
 		assertTrue("Missing toBuilder() method", Arrays.stream(mainClassMethods).anyMatch(m -> "toBuilder".equals(m.getName())));
 	}
+
+	public void testGenerateExtensibleBuilderMultipleTimesDoesNotDuplicateConstructor() {
+		String testCode = """
+            public class Developer extends Person {
+                private String language;
+            }
+            class Person {
+                private String name;
+            }
+            """;
+
+		PsiFile file = myFixture.configureByText("Developer.java", testCode);
+		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
+
+		// First generation
+		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
+			builderClassGenerator.generateBuilder(psiClass, List.of("language"), false, com.zeitbuilder.zeitbuilder.model.HierarchyType.EXTENSIBLE)
+		);
+		long constructorsFirstGen = Arrays.stream(psiClass.getConstructors()).count();
+
+		// Second generation (simulate user regenerating the builder over the same class)
+		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
+			builderClassGenerator.generateBuilder(psiClass, List.of("language"), false, com.zeitbuilder.zeitbuilder.model.HierarchyType.EXTENSIBLE)
+		);
+		long constructorsSecondGen = Arrays.stream(psiClass.getConstructors()).count();
+
+		assertEquals("Generating builder multiple times should properly delete the previous protected constructor",
+			constructorsFirstGen, constructorsSecondGen);
+	}
 }
