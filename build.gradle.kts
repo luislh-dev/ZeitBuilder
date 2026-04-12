@@ -42,7 +42,13 @@ intellijPlatform {
         }
 
         changeNotes = """
-            Initial version
+            <ul>
+                <li>feat: agregar soporte para generadores de builders extensibles</li>
+                <li>fix: genera automáticamente constructor sin argumentos, excepto cuando existen propiedades final</li>
+                <li>build: actualizar versión de AssertJ a 3.27.7</li>
+                <li>refactor: migrar uso de constantes PsiType obsoletas</li>
+                <li>feat: agregar soporte para generadores de builders de records</li>
+            </ul>
         """.trimIndent()
     }
 
