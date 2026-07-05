@@ -44,8 +44,9 @@ intellijPlatform {
             sinceBuild = "231"
         }
 
-        val rawChangelog = System.getenv("RELEASE_CHANGELOG") ?: "<ul><li>Local build / Snapshot</li></ul>"
-        changeNotes = "<![CDATA[\n$rawChangelog\n]]>"
+        // Do NOT wrap in <![CDATA[ ]]> here: patchPluginXml already wraps
+        // changeNotes in a CDATA section, and nesting one causes a build error.
+        changeNotes = System.getenv("RELEASE_CHANGELOG") ?: "<ul><li>Local build / Snapshot</li></ul>"
 
         version = pluginVersion
     }
