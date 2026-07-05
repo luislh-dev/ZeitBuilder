@@ -1,10 +1,10 @@
 name: CI
 
+# Runs on pull requests only. Pushes to main/beta are handled by the
+# Release & Publish workflow, so we avoid running tests twice.
 on:
-  push:
-    branches: [ main, master ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, beta ]
 
 jobs:
   build-test:

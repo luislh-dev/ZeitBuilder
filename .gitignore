@@ -47,3 +47,10 @@ htmlReport
 .env
 .env.local
 .env.*.local
+
+### signing keys & certificates (never commit) ###
+*.pem
+*.crt
+*.cnf
+*.p12
+*.key
