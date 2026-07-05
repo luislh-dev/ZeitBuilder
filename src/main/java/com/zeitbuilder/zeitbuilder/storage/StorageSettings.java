@@ -4,7 +4,6 @@ import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.components.State;
 import com.zeitbuilder.zeitbuilder.model.HierarchyType;
-import com.zeitbuilder.zeitbuilder.model.Storage;
 import org.jetbrains.annotations.NotNull;
 
 @Service

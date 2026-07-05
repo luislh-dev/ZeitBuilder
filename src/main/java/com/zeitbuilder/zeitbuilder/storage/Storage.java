@@ -1,4 +1,6 @@
-package com.zeitbuilder.zeitbuilder.model;
+package com.zeitbuilder.zeitbuilder.storage;
+
+import com.zeitbuilder.zeitbuilder.model.HierarchyType;
 
 public class Storage {
 	private boolean useInstanceBased = false;

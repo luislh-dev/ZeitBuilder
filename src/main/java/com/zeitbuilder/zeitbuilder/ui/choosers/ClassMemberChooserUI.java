@@ -5,7 +5,7 @@ import com.intellij.ide.util.MemberChooser;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.psi.PsiClass;
-import com.zeitbuilder.zeitbuilder.domain.models.FieldInfo;
+import com.zeitbuilder.zeitbuilder.model.FieldInfo;
 import com.zeitbuilder.zeitbuilder.model.BuilderSelection;
 import com.zeitbuilder.zeitbuilder.model.HierarchyType;
 import com.zeitbuilder.zeitbuilder.services.FieldSelectionService;

@@ -4,7 +4,7 @@ import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiJavaFile;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
-import com.zeitbuilder.zeitbuilder.domain.models.FieldInfo;
+import com.zeitbuilder.zeitbuilder.model.FieldInfo;
 import com.zeitbuilder.zeitbuilder.model.BuilderSelection;
 
 import java.util.List;
