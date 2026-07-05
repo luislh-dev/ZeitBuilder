@@ -3,7 +3,7 @@ package com.zeitbuilder.zeitbuilder.services;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiModifier;
-import com.zeitbuilder.zeitbuilder.domain.models.FieldInfo;
+import com.zeitbuilder.zeitbuilder.model.FieldInfo;
 import com.zeitbuilder.zeitbuilder.model.BuilderSelection;
 import com.zeitbuilder.zeitbuilder.model.HierarchyType;
 

@@ -318,4 +318,29 @@ public class BuilderClassGeneratorTest extends BasePlatformTestCase {
 		assertEquals("Generating builder multiple times should properly delete the previous protected constructor",
 			constructorsFirstGen, constructorsSecondGen);
 	}
+
+	public void testExtensibleAbstractBuilderUsesCanonicalModifierOrder() {
+		String testCode = """
+            public class Developer {
+                private String language;
+            }
+            """;
+
+		PsiFile file = myFixture.configureByText("Developer.java", testCode);
+		PsiClass psiClass = ((PsiJavaFile) file).getClasses()[0];
+
+		WriteCommandAction.runWriteCommandAction(myFixture.getProject(), () ->
+			builderClassGenerator.generateBuilder(psiClass, List.of("language"), false, com.zeitbuilder.zeitbuilder.model.HierarchyType.EXTENSIBLE)
+		);
+
+		PsiClass abstractBuilder = Arrays.stream(psiClass.getInnerClasses())
+			.filter(c -> "Builder".equals(c.getName()))
+			.findFirst().orElseThrow();
+
+		// Sonar java:S1124 - modifiers must follow the canonical order (abstract before static).
+		assertTrue("Abstract Builder should declare modifiers as 'abstract static'",
+			abstractBuilder.getText().contains("abstract static class Builder"));
+		assertFalse("Abstract Builder must not use 'static abstract' order",
+			abstractBuilder.getText().contains("static abstract"));
+	}
 }

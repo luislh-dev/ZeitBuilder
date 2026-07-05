@@ -1,4 +1,4 @@
-package com.zeitbuilder.zeitbuilder.domain.models;
+package com.zeitbuilder.zeitbuilder.model;
 
 public record FieldInfo(String name, boolean defaultSelected) {
 

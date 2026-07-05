@@ -32,7 +32,7 @@ public class CodeBuilderHelper {
 	public static PsiClass createExtensibleAbstractBuilderClass(PsiClass psiClass, List<PsiField> fields) {
 		String className = psiClass.getName();
 		StringBuilder text = new StringBuilder();
-		text.append("public static abstract class Builder<C extends ").append(className).append(", B extends Builder<C, B>>");
+		text.append("public abstract static class Builder<C extends ").append(className).append(", B extends Builder<C, B>>");
 
 		PsiClass superClass = psiClass.getSuperClass();
 		if (superClass != null && !"java.lang.Object".equals(superClass.getQualifiedName())) {
