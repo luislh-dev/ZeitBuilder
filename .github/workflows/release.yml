@@ -1,41 +1,109 @@
-name: Release
+name: Release & Publish
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches: [ main, beta ]
+  workflow_dispatch:
+
+# Never run two releases for the same branch at once.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  publish:
+  # 1) Work out whether these commits deserve a release and on which channel.
+  version:
+    name: Calculate version
     runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.tag.outputs.new_version }}
+      new_tag: ${{ steps.tag.outputs.new_tag }}
+      changelog: ${{ steps.tag.outputs.changelog }}
+      channel: ${{ steps.channel.outputs.channel }}
+      prerelease: ${{ steps.channel.outputs.prerelease }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup JDK 21
+      - name: Fetch sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve channel from branch
+        id: channel
+        run: |
+          if [ "${{ github.ref_name }}" = "beta" ]; then
+            echo "channel=beta"      >> "$GITHUB_OUTPUT"
+            echo "prerelease=true"   >> "$GITHUB_OUTPUT"
+          else
+            echo "channel=default"   >> "$GITHUB_OUTPUT"
+            echo "prerelease=false"  >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Calculate version and changelog
+        id: tag
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dry_run: true
+          default_bump: false
+          release_branches: main
+          pre_release_branches: beta
+          append_to_pre_release_tag: beta
+          custom_release_rules: feat:minor,fix:patch,perf:patch
+
+  # 2) Only runs when there is actually a new version to ship.
+  publish:
+    name: Build, publish and release
+    needs: version
+    if: needs.version.outputs.new_version != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Fetch sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Convert changelog to HTML (JetBrains change notes)
+        id: notes
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+          printf "%s" "${{ needs.version.outputs.changelog }}" > CHANGELOG.md
+          pandoc -f gfm -t html CHANGELOG.md -o CHANGELOG.html
+          {
+            echo "html<<EOF"
+            cat CHANGELOG.html
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
           distribution: 'temurin'
-          cache: 'gradle'
-      - run: chmod +x gradlew
+          java-version: '21'
 
-      - name: Build plugin
-        run: ./gradlew buildPlugin
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Publish Plugin to JetBrains Marketplace
-        run: ./gradlew publishPlugin
+      - name: Test, verify and publish to JetBrains Marketplace
         env:
-          JETBRAINS_PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}
-          CHANNEL: ${{
-            contains(github.ref_name, 'alpha') && 'alpha' ||
-            (contains(github.ref_name, 'beta') && 'beta' || 'default')
-            }}
+          RELEASE_VERSION: ${{ needs.version.outputs.new_version }}
+          RELEASE_CHANGELOG: ${{ steps.notes.outputs.html }}
+          CHANNEL: ${{ needs.version.outputs.channel }}
+          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+          CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
+        run: ./gradlew test verifyPlugin publishPlugin
 
-      - name: Create GitHub Release
+      - name: Create tag and GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body: |
-            🚀 Published plugin version ${{ github.ref_name }}
+          tag_name: ${{ needs.version.outputs.new_tag }}
+          name: Release ${{ needs.version.outputs.new_version }}
+          body: ${{ needs.version.outputs.changelog }}
+          prerelease: ${{ needs.version.outputs.prerelease == 'true' }}
+          files: build/distributions/*
         env:
-          GITHUB_TOKEN: ${{ github.token  }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

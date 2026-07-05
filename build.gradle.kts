@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.1.0"
@@ -9,7 +11,8 @@ val assertjVersion = "3.27.7"
 val junitVersion = "4.13.2"
 
 group = "com.zeitbuilder"
-version = System.getenv("GITHUB_REF_NAME")?.removePrefix("v") ?: "1.0.0-SNAPSHOT"
+val pluginVersion = System.getenv("RELEASE_VERSION") ?: "1.0.1-SNAPSHOT"
+version = pluginVersion
 
 repositories {
     mavenCentral()
@@ -41,17 +44,39 @@ intellijPlatform {
             sinceBuild = "231"
         }
 
-        changeNotes = """
-            <ul>
-                <li>feat: agregar soporte para generadores de builders extensibles</li>
-                <li>fix: genera automáticamente constructor sin argumentos, excepto cuando existen propiedades final</li>
-                <li>build: actualizar versión de AssertJ a 3.27.7</li>
-                <li>refactor: migrar uso de constantes PsiType obsoletas</li>
-                <li>feat: agregar soporte para generadores de builders de records</li>
-            </ul>
-        """.trimIndent()
+        // Do NOT wrap in <![CDATA[ ]]> here: patchPluginXml already wraps
+        // changeNotes in a CDATA section, and nesting one causes a build error.
+        changeNotes = System.getenv("RELEASE_CHANGELOG") ?: "<ul><li>Local build / Snapshot</li></ul>"
+
+        version = pluginVersion
     }
 
+    // Plugin signing. Only configured when the signing secrets are present,
+    // so local builds and unsigned CI runs don't fail.
+    val certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
+    if (certificateChain.isPresent) {
+        signing {
+            this.certificateChain = certificateChain
+            privateKey = providers.environmentVariable("PRIVATE_KEY")
+            password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
+        }
+    }
+
+    publishing {
+        token = providers.environmentVariable("PUBLISH_TOKEN")
+        // "default" = stable channel; "beta" = beta channel (custom repo URL).
+        channels = providers.environmentVariable("CHANNEL")
+            .map { listOf(it) }
+            .orElse(listOf("default"))
+    }
+
+    // Runs the JetBrains IntelliJ Plugin Verifier against recommended IDEs
+    // before publishing, catching API-compatibility problems early.
+    pluginVerification {
+        ides {
+            recommended()
+        }
+    }
 }
 
 tasks {
@@ -60,16 +85,11 @@ tasks {
         targetCompatibility = "21"
     }
 
+    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+        compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
+    }
+
     test {
         useJUnit()
     }
-
-    publishPlugin {
-        token.set(System.getenv("JETBRAINS_PUBLISH_TOKEN"))
-
-        val channel = System.getenv("CHANNEL") ?: "alpha"
-
-        channels.set(listOf(channel))
-    }
-
 }
